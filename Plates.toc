@@ -1,0 +1,14 @@
+## Interface: 12000000
+## Title: Plates
+## Notes: Plates
+## Author: Baddie Longlegs
+## Version: 1.0.0
+
+Plates.lua
+
+Constants.lua
+
+NamePlate.lua
+HealthBar.lua
+HealthBarBorder.lua
+UnitNameText.lua
