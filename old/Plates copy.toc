@@ -4,11 +4,11 @@
 ## Author: Baddie Longlegs
 ## Version: 1.0.0
 
-Pixel.lua
+Plates.lua
 
-Core.lua
+Constants.lua
 
-Nameplate.lua
-
+NamePlate.lua
 HealthBar.lua
-NameText.lua
+HealthBarBorder.lua
+UnitNameText.lua

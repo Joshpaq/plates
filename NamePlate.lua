@@ -1,76 +1,51 @@
 local addonTable = select(2, ...)
 
-
-local CreateFrame = CreateFrame
 local GetNamePlateForUnit = C_NamePlate.GetNamePlateForUnit
-local Mixin = Mixin
+local Scale = addonTable.Scale
 
---
--- MIXIN
---
+local NamplateMixin = {}
 
-local PlateMixin = {}
+function NamplateMixin:Enable(unit)
+  self.unit = unit
 
--- called on NAME_PLATE_UNIT_ADDED
-function PlateMixin:Initialize(unit)
   local blizzardNameplate = GetNamePlateForUnit(unit)
+  blizzardNameplate.UnitFrame:Hide()
 
-  if blizzardNameplate then 
-    self.healthBar:Initialize(unit)
-    self.healthBarBorder:Initialize(unit)
-    self.unitNameText:Initialize(unit)
+  self:SetPoint("CENTER", blizzardNameplate)
+  self:Show()
 
-    self:Show()
-    blizzardNameplate.UnitFrame:Hide()
-  end
+  self.healthBar:Enable(unit)
+  self.nameText:Enable(unit)
 end
 
--- called on NAME_PLATE_UNIT_REMOVED
-function PlateMixin:Deinitialize()
+function NamplateMixin:Disable()
+  self.unit = nil
+
   self:Hide()
 
-  self.healthBar:Deinitialize()
-  self.unitNameText:Deinitialize()
+  self.healthBar:Disable()
+  self.nameText:Disable()
 end
 
---
--- CREATE
---
-
-local globalFrameLevel = 1
-
-function addonTable.CreateNamePlate(parent)
-  local plate = CreateFrame("Frame")
-
-  local frameLevel = globalFrameLevel
-  plate:SetFrameLevel(frameLevel)
-  globalFrameLevel = globalFrameLevel + 10
-
-  --plate:SetParent(parent)
-  plate:SetIgnoreParentScale(true)
-  plate:EnableMouse(false)
-  plate:Show()
-
-  --plate:SetParent(parent) -- TODO: either make it's parent the blizz frame or use SetPOint("Center", blizzFrame)
-  plate:SetPoint("CENTER", parent)
-
-  PixelUtil.SetWidth(plate, 150, 1)
-  PixelUtil.SetHeight(plate, 20, 1)
-
-
-  local healthBar = addonTable.CreateHealthBar(plate)
-  healthBar:SetFrameLevel(frameLevel + 1)
-  plate.healthBar = healthBar
-
-  local healthBarBorder = addonTable.CreateHealthBarBorder(plate)
-  healthBar:SetFrameLevel(frameLevel + 2)
-  plate.healthBarBorder = healthBarBorder
-
-  local unitNameText = addonTable.CreateUnitNameText(plate)
-  unitNameText:SetFrameLevel(frameLevel + 3)
-  plate.unitNameText = unitNameText
-
-  Mixin(plate, PlateMixin)
-
-  return plate
+local function getFrameLevelFromIndex(index)
+  return 1 + 10 * index
 end
+
+function addonTable.CreateNameplate(parent, index)
+  local nameplate = CreateFrame("Frame", "JPlates_Nameplate_" .. index, parent)
+  nameplate:SetFrameLevel(getFrameLevelFromIndex(index))
+
+  nameplate:SetWidth(Scale(150))
+  nameplate:SetHeight(Scale(20))
+
+  local healthBar = addonTable.CreateHealthBar(nameplate)
+  nameplate.healthBar = healthBar
+
+  local nameText = addonTable.CreateNameText(nameplate)
+  nameplate.nameText = nameText
+
+  Mixin(nameplate, NamplateMixin)
+
+  return nameplate
+end
+

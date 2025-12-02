@@ -1,14 +1,9 @@
 local addonTable = select(2, ...)
 
-local CreateFrame = CreateFrame
-local Mixin = Mixin
-local print = print
+local Scale = addonTable.Scale
+local UnitGetTotalAbsorbs = UnitGetTotalAbsorbs
 local UnitHealth = UnitHealth
 local UnitHealthMax = UnitHealthMax
-
-----------------------------------------------------------------------
--- MARK: MIXIN
-----------------------------------------------------------------------
 
 local HealthBarMixin = {}
 
@@ -25,34 +20,25 @@ end
 function HealthBarMixin:UpdateShield()
   print(self.unit .. ".HealthBar.UpdateShield")
 
-  local totalAbsorbs = UnitGetTotalAbsorbs(self.unit)
-  local shieldPercent = 20--totalAbsorbs / UnitHealthMax(unit)
-  local healthPercent = 100 --UnitHealth(unit) / UnitHealthMax(unit)
+  local totalAbsorbs = 2500000 -- UnitGetTotalAbsorbs(self.unit)
 
-  self.shield:SetWidth(40)-- :SetValue(shieldPercent, healthPercent)
+  if  totalAbsorbs > 0 then
+    local maxHealth = UnitHealthMax(self.unit)
+    local shieldPercent = totalAbsorbs / maxHealth
+    --local currentHealth = UnitHealth(self.unit)
+    --local healthPercent = currentHealth / maxHealth
+    -- used to figure out if we need a glow because shield + health > 100%
+    local width = shieldPercent * self:GetWidth()
 
-  if totalAbsorbs > 0 then
-    print("HAS ABSORBS")
-  end
-
-end
-
-function HealthBarMixin:OnEvent(event)
-  print(self.unit .. "HealthBar.OnEvent")
-
-  if event == "UNIT_HEALTH" then
-    self:UpdateHealth()
-  elseif event == "UNIT_MAXHEALTH" then
-    self:UpdateMaxHealth()
-  elseif event == "UNIT_ABSORB_AMOUNT_CHANGED" then
-    self:UpdateShield()
-  else 
-    print("Unhandled HealthBar Event", self.unit, event)
+    self.shieldTexture:SetWidth(width)
+    self.shieldTexture:Show()
+  else
+    self.shieldTexture:Hide()
   end
 end
 
-function HealthBarMixin:Initialize(unit)
-  self.unit = unit
+function HealthBarMixin:Enable(unit)
+  self.unit = unit;
 
   self:RegisterUnitEvent("UNIT_HEALTH", self.unit)
   self:RegisterUnitEvent("UNIT_MAXHEALTH", self.unit)
@@ -63,51 +49,76 @@ function HealthBarMixin:Initialize(unit)
   self:UpdateShield()
 end
 
-function HealthBarMixin:Deinitialize()
-  self:UnregisterAllEvents()
+function HealthBarMixin:Disable()
+  self.unit = nil;
 
-  self:SetMinMaxValues(0, 1)
-  self:SetValue(1)
+  self:UnregisterEvent("UNIT_HEALTH")
+  self:UnregisterEvent("UNIT_MAXHEALTH")
+  self:UnregisterEvent("UNIT_ABSORB_AMOUNT_CHANGED")
 end
 
-----------------------------------------------------------------------
--- MARK: CREATE
-----------------------------------------------------------------------
 
-function addonTable.CreateHealthBar(plate)
-  local healthBar = CreateFrame("StatusBar", nil, plate)
+function HealthBarMixin:OnEvent(event)
+  print(self.unit .. "HealthBar.OnEvent")
+
+  if event == "UNIT_HEALTH" then
+    self:UpdateHealth()
+    self:UpdateShield()
+  elseif event == "UNIT_MAXHEALTH" then
+    self:UpdateMaxHealth()
+    self:UpdateShield()
+  elseif event == "UNIT_ABSORB_AMOUNT_CHANGED" then
+    self:UpdateShield()
+  else 
+    print("Unhandled HealthBar Event", self.unit, event)
+  end
+end
+
+function addonTable.CreateHealthBar(nameplate)
+  local healthBar = CreateFrame("StatusBar", nil, nameplate) -- TODO: name? JPlates_Nameplate_{{index}}_HealthBar
   healthBar:SetAllPoints()
   healthBar:SetClipsChildren(true)
 
   -- HEALTH TEXTURE
-  local health = healthBar:CreateTexture(nil, "ARTWORK", nil, 1)
-  health:SetTexture(addonTable.constants.TEXTURES.SOLID)
-  health:SetAllPoints()
-  health:SetVertexColor(1, 0, 0)
-  health:SetSnapToPixelGrid(false)
-  health:SetTexelSnappingBias(0)
-  healthBar:SetStatusBarTexture(health)
-  healthBar.health = health
+  local healthTexture = healthBar:CreateTexture(nil, "ARTWORK", nil, 1)
+  --healthTexture:SetTexture(addonTable.constants.TEXTURES.SOLID)
+  healthTexture:SetTexture("Interface\\Buttons\\WHITE8X8")
+  healthTexture:SetAllPoints()
+  healthTexture:SetVertexColor(1, 0, 0)
+  healthTexture:SetSnapToPixelGrid(false)
+  healthTexture:SetTexelSnappingBias(0)
+
+  healthBar:SetStatusBarTexture(healthTexture)
+  healthBar.healthTexture = healthTexture
 
   -- SHIELD TEXTURE
-  local shield = healthBar:CreateTexture(nil, "ARTWORK", nil, 2)
-  shield:SetTexture(addonTable.constants.TEXTURES.SHIELD, "REPEAT", "REPEAT")
-  shield:SetPoint("LEFT", health, "RIGHT", -50, 0)
-  shield:SetSnapToPixelGrid(false)
-  shield:SetTexelSnappingBias(0)
-  healthBar.shield = shield
+  --local shieldBar = CreateFrame("Frame", nil, nameplate)
+  --shieldBar:SetPoint("LEFT", healthTexture, "RIGHT")
 
-  -- BACKGROUND TEXTURE
-  local background = healthBar:CreateTexture(nil, "ARTWORK", nil, -6)
-  background:SetColorTexture(0, 0, 0, .8)
-  background:SetAllPoints()
-  healthBar.background = background
-  
+  --local shieldTexture = shieldBar:CreateTexture(nil, "ARTWORK", nil, 2)
+  local shieldTexture = healthBar:CreateTexture(nil, "ARTWORK", nil, 2)
+  shieldTexture:SetTexture("Interface\\AddOns\\Plates\\Media\\shield", "REPEAT", "REPEAT")
+  shieldTexture:SetHorizTile(true)
+  shieldTexture:SetVertTile(true)
+  shieldTexture:SetVertexColor(1, 1, 1)
+  shieldTexture:SetPoint("LEFT", healthTexture, "RIGHT", Scale(0), Scale(0))
+  shieldTexture:SetSnapToPixelGrid(false)
+  shieldTexture:SetTexelSnappingBias(0)
+  shieldTexture:Hide()
+
+  healthBar.shieldTexture = shieldTexture
+
+  -- BACKGROUND TEXTTURE
+  local backgroundTexture = healthBar:CreateTexture(nil, "ARTWORK", nil, -6)
+  backgroundTexture:SetTexture("Interface\\Buttons\\WHITE8X8")
+  backgroundTexture:SetVertexColor(0, 0, 0, .8)
+  backgroundTexture:SetAllPoints()
+
+  healthBar.backgroundTexture = backgroundTexture
+
   Mixin(healthBar, HealthBarMixin)
+  
   healthBar:SetScript("OnEvent", healthBar.OnEvent)
 
   return healthBar
 end
-
-
-

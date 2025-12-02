@@ -18,13 +18,16 @@ function UnitNameTextMixin:OnEvent(event)
   print(self.unit .. ".UnitNameText.OnEvent")
 
   if event == "UNIT_NAME_UPDATE" then
+    local start = os.clock()
     self:UpdateUnitName()
+    local elapsed = os.clock() - start
+    print(elapsed / 1000000)
   else 
     print("Unhandled UnitNameText Event", self.unit, event)
   end
 end
 
-function UnitNameTextMixin:Initialize(unit)
+function UnitNameTextMixin:Enable(unit)
   self.unit = unit
 
   self:RegisterUnitEvent("UNIT_NAME_UPDATE", self.unit)
@@ -32,7 +35,7 @@ function UnitNameTextMixin:Initialize(unit)
   self:UpdateUnitName()
 end
 
-function UnitNameTextMixin:Deinitialize()
+function UnitNameTextMixin:Disable()
   self:UnregisterAllEvents()
 end
 
@@ -54,6 +57,7 @@ function addonTable.CreateUnitNameText(parent)
   unitNameText.fontString = fontString
 
   Mixin(unitNameText, UnitNameTextMixin)
+
   unitNameText:SetScript("OnEvent", unitNameText.OnEvent)
 
   return unitNameText
